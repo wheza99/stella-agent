@@ -8,6 +8,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Field, FieldLabel } from "@/components/ui/field";
+import { useUser } from "@/context/user-context";
 import {
   Card,
   CardContent,
@@ -26,6 +27,7 @@ export function LoginForm({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const { refreshUser } = useUser();
 
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -40,6 +42,7 @@ export function LoginForm({
       });
 
       if (response.data.status === "success") {
+        await refreshUser();
         router.push("/");
       }
     } catch (err: unknown) {
