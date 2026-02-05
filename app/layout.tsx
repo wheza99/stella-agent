@@ -4,6 +4,7 @@ import "./globals.css";
 import { UserProvider } from "@/context/user-context";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import AppSidebar from "@/components/pabrik-startup/sidebar";
+import { AppHeader } from "@/components/pabrik-startup/header";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -34,6 +35,7 @@ export default function RootLayout({
           <SidebarProvider>
             <AppSidebar />
             <SidebarInset>
+              <AppHeader />
               {children}
             </SidebarInset>
           </SidebarProvider>
