@@ -1,7 +1,7 @@
 "use client";
 
 import ChatInput from "./chat-input";
-import { Card, CardContent, CardFooter } from "../ui/card";
+import { Card, CardContent, CardFooter } from "../../ui/card";
 import ChatBubble from "./chat-bubble";
 import { Chat } from "@/type/interface/chat";
 import { useEffect, useState } from "react";
@@ -36,7 +36,7 @@ export default function ChatSection({ projectId }: ChatSectionProps) {
         <ChatBubble messages={messages} />
       </CardContent>
       <CardFooter>
-        <ChatInput setMessages={setMessages} projectId={projectId} />
+        <ChatInput messages={messages} setMessages={setMessages} projectId={projectId} />
       </CardFooter>
     </Card>
   );

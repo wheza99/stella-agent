@@ -3,8 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { UserProvider } from "@/context/user-context";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import AppSidebar from "@/components/pabrik-startup/sidebar";
-import { AppHeader } from "@/components/pabrik-startup/header";
+import AppSidebar from "@/components/pabrik-startup/sidebar/sidebar";
+import { AppHeader } from "@/components/pabrik-startup/header/header";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

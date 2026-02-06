@@ -3,13 +3,17 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { User } from "@/type/interface/user";
 import { Organization } from "@/type/interface/organization";
+import { Project } from "@/type/interface/project";
+import axios from "axios";
 
 interface UserContextType {
   user: User | null;
   activeOrg: Organization | null;
+  projects: Project[];
   isOrgRequired: boolean;
   setUser: (user: User | null) => void;
   setActiveOrg: (org: Organization | null) => void;
+  setProjects: (projects: Project[]) => void;
   setIsOrgRequired: (required: boolean) => void;
   loading: boolean;
   refreshUser: () => Promise<void>;
@@ -20,6 +24,7 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [activeOrg, setActiveOrg] = useState<Organization | null>(null);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [isOrgRequired, setIsOrgRequired] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -58,18 +63,41 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const fetchProjects = async () => {
+    try {
+      if (!activeOrg) {
+        setProjects([]);
+        return;
+      }
+      const response = await axios.get("/api/project/list", {
+        params: { org_id: activeOrg.id },
+      });
+      if (response.data.status === "success") {
+        setProjects(response.data.projects);
+      }
+    } catch {
+      setProjects([]);
+    }
+  };
+
   useEffect(() => {
     fetchUser();
   }, []);
+
+  useEffect(() => {
+    fetchProjects();
+  }, [activeOrg]);
 
   return (
     <UserContext.Provider
       value={{
         user,
         activeOrg,
+        projects,
         isOrgRequired,
         setUser,
         setActiveOrg,
+        setProjects,
         setIsOrgRequired,
         loading,
         refreshUser: fetchUser,

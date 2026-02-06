@@ -3,8 +3,8 @@
 import { useRef, useEffect } from "react";
 import { Bot, User } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Avatar, AvatarFallback } from "../ui/avatar";
-import { Item } from "../ui/item";
+import { Avatar, AvatarFallback } from "../../ui/avatar";
+import { Item } from "../../ui/item";
 import { Chat } from "@/type/interface/chat";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";

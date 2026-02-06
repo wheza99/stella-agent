@@ -1,13 +1,13 @@
 "use client";
 
-import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from '../ui/sidebar'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '../ui/dropdown-menu'
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar'
+import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from '../../ui/sidebar'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '../../ui/dropdown-menu'
+import { Avatar, AvatarFallback, AvatarImage } from '../../ui/avatar'
 import { BadgeCheck, Bell, ChevronsUpDown, CreditCard, LogInIcon, LogOut, Sparkles } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useUser } from '@/context/user-context'
-import { Item, ItemActions, ItemContent, ItemDescription, ItemMedia, ItemTitle } from '../ui/item'
-import { Button } from '../ui/button';
+import { Item, ItemActions, ItemContent, ItemDescription, ItemMedia, ItemTitle } from '../../ui/item'
+import { Button } from '../../ui/button';
 
 function SidebarUser() {
   const router = useRouter();

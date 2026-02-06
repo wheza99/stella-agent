@@ -1,4 +1,4 @@
-import { RegisterForm } from "@/components/pabrik-startup/auth-register";
+import { RegisterForm } from "@/components/pabrik-startup/auth/auth-register";
 
 function RegisterPage() {
   return <RegisterForm />;

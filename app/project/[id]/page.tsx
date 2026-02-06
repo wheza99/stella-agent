@@ -1,4 +1,4 @@
-import ChatSection from '@/components/pabrik-startup/chat-section'
+import ChatSection from '@/components/pabrik-startup/chat/chat-section'
 import { Card } from '@/components/ui/card'
 
 interface PageProps {

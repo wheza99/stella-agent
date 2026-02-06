@@ -1,11 +1,11 @@
 "use client";
 
-import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from '../ui/sidebar'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuShortcut, DropdownMenuTrigger } from '../ui/dropdown-menu'
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar'
+import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from '../../ui/sidebar'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuShortcut, DropdownMenuTrigger } from '../../ui/dropdown-menu'
+import { Avatar, AvatarFallback, AvatarImage } from '../../ui/avatar'
 import { ChevronsUpDown, PlusIcon } from 'lucide-react'
 import { useUser } from '@/context/user-context'
-import { Item, ItemActions, ItemContent, ItemDescription, ItemHeader, ItemMedia, ItemTitle } from '../ui/item'
+import { Item, ItemActions, ItemContent, ItemDescription, ItemHeader, ItemMedia, ItemTitle } from '../../ui/item'
 import { useState } from 'react';
 import SidebarOrgDialog from './sidebar-org-dialog';
 

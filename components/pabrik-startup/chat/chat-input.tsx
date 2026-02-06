@@ -19,6 +19,7 @@ import axios from "axios";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/context/user-context";
 import { Chat } from "@/type/interface/chat";
+import { Project } from "@/type/interface/project";
 
 const MODELS = [
   {
@@ -29,16 +30,17 @@ const MODELS = [
 ];
 
 interface ChatInputProps {
+  messages?: Chat[];
   setMessages?: React.Dispatch<React.SetStateAction<Chat[]>>;
   projectId?: string;
 }
 
-export default function ChatInput({ setMessages, projectId }: ChatInputProps) {
+export default function ChatInput({ messages, setMessages, projectId }: ChatInputProps) {
   const [userInput, setUserInput] = useState<string>("");
   const [model, setModel] = useState(MODELS[0]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { user, activeOrg } = useUser();
+  const { user, activeOrg, projects, setProjects } = useUser();
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -63,14 +65,25 @@ export default function ChatInput({ setMessages, projectId }: ChatInputProps) {
     }
 
     try {
+      const formatMessages = (messages || []).map((msg) => ({
+        role: msg.role,
+        content: msg.content,
+      }));
+
+      const newMessages = [...formatMessages, {
+        role: "user",
+        content: userInput
+      }];
+
       const response = await axios.post("/api/chat/groq", {
-        messages: [{ role: "user", content: userInput }],
+        messages: newMessages,
         model: model.value,
         org_id: !projectId ? activeOrg?.id : null,
         project_id: projectId,
       });
 
       if (response.data.project !== null) {
+        setProjects([...projects, response.data.project as Project]);
         router.push(`/project/${response.data.project.id}`);
       } else if (setMessages) {
         setMessages((prev) => [...prev, {

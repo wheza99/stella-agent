@@ -1,4 +1,4 @@
-import ChatInput from "@/components/pabrik-startup/chat-input";
+import ChatInput from "@/components/pabrik-startup/chat/chat-input";
 import { Item, ItemDescription, ItemTitle } from "@/components/ui/item";
 
 export default function Home() {

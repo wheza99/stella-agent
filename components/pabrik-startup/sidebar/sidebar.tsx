@@ -1,5 +1,6 @@
-import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader } from "../ui/sidebar"
+import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader } from "../../ui/sidebar"
 import SidebarOrganization from "./sidebar-organization"
+import SidebarProject from "./sidebar-project"
 import SidebarUser from "./sidebar-user"
 
 function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -8,7 +9,9 @@ function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarHeader>
         <SidebarOrganization />
       </SidebarHeader>
-      <SidebarContent></SidebarContent>
+      <SidebarContent>
+        <SidebarProject />
+      </SidebarContent>
       <SidebarFooter>
         <SidebarUser />
       </SidebarFooter>
