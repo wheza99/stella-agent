@@ -3,7 +3,7 @@
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from '../../ui/sidebar'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '../../ui/dropdown-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '../../ui/avatar'
-import { BadgeCheck, Bell, ChevronsUpDown, CreditCard, LogInIcon, LogOut, Sparkles } from 'lucide-react'
+import { BadgeCheck, ChevronsUpDown, CreditCard, Key, LogInIcon, LogOut } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useUser } from '@/context/user-context'
 import { Item, ItemActions, ItemContent, ItemDescription, ItemMedia, ItemTitle } from '../../ui/item'
@@ -96,24 +96,17 @@ function SidebarUser() {
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
-                <DropdownMenuItem>
-                  <Sparkles />
-                  Upgrade to Pro
-                </DropdownMenuItem>
-              </DropdownMenuGroup>
-              <DropdownMenuSeparator />
-              <DropdownMenuGroup>
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.push("/auth/account")}>
                   <BadgeCheck />
                   Account
                 </DropdownMenuItem>
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.push("/payment/plan")}>
                   <CreditCard />
                   Billing
                 </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Bell />
-                  Notifications
+                <DropdownMenuItem onClick={() => router.push("/auth/keys")}>
+                  <Key />
+                  API Keys
                 </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />

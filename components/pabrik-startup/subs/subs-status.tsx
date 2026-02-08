@@ -29,7 +29,7 @@ function SubsStatusCard({ tripayRef, merchantRef }: { tripayRef: string | null, 
       } catch (err: unknown) {
         if (axios.isAxiosError(err)) {
           setError(
-            err.response?.data?.message || err.message || "Failed to login",
+            err.response?.data?.message || err.message || "Failed to check payment status",
           );
         } else {
           setError("An unexpected error occurred");

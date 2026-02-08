@@ -8,11 +8,14 @@ import { useUser } from '@/context/user-context'
 import { Item, ItemActions, ItemContent, ItemDescription, ItemHeader, ItemMedia, ItemTitle } from '../../ui/item'
 import { useState } from 'react';
 import SidebarOrgDialog from './sidebar-org-dialog';
+import { Button } from '@/components/ui/button';
+import { useRouter } from 'next/navigation';
 
 function SidebarOrganization() {
   const { isMobile } = useSidebar();
   const { user, activeOrg, setActiveOrg } = useUser();
   const [showCreateOrgDialog, setShowCreateOrgDialog] = useState(false);
+  const router = useRouter();
 
   return (
     <>
@@ -45,7 +48,7 @@ function SidebarOrganization() {
                       </ItemTitle>
                       <ItemDescription>
                         {activeOrg
-                          ? `${activeOrg.credits_total} credits`
+                          ? `${activeOrg?.credit?.total || 0} credits`
                           : "No org selected"}
                       </ItemDescription>
                     </ItemContent>
@@ -81,7 +84,15 @@ function SidebarOrganization() {
                       </AvatarFallback>
                     </Avatar>
                     {org.name}
-                    <DropdownMenuShortcut>⌘{index + 1}</DropdownMenuShortcut>
+                    {activeOrg?.id === org.id && (
+                      <Button
+                        className="ml-auto py-0"
+                        variant="outline"
+                        onClick={() => router.push(`/org/${org.id}`)}
+                      >
+                        Manage
+                      </Button>
+                    )}
                   </DropdownMenuItem>
                 ))}
                 <DropdownMenuSeparator />
