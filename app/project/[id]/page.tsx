@@ -1,17 +1,30 @@
+"use client";
+
+import { useState, useCallback, use } from "react";
 import ChatSection from '@/components/pabrik-startup/chat/chat-section'
-import { Card } from '@/components/ui/card'
+import { LinkedInResultsPanel } from '@/components/pabrik-startup/linkedin'
 
 interface PageProps {
   params: Promise<{ id: string }>
 }
 
-async function ProjectDetailPage({ params }: PageProps) {
-  const { id } = await params
+function ProjectDetailPage({ params }: PageProps) {
+  const { id } = use(params);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const handleToolCall = useCallback((toolCall: any) => {
+    if (toolCall?.some?.((tc: any) => 
+      tc.name === "search_linkedin_profiles" && tc.success
+    )) {
+      setRefreshKey(prev => prev + 1);
+    }
+  }, []);
 
   return (
-    <Card className='flex p-0 rounded-none'>
-      <ChatSection projectId={id} />
-    </Card>
+    <div className="w-full h-full flex flex-row flex-1 overflow-hidden">
+      <ChatSection projectId={id} onToolCall={handleToolCall} />
+      <LinkedInResultsPanel key={refreshKey} projectId={id} />
+    </div>
   )
 }
 

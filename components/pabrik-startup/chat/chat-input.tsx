@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUpIcon } from "lucide-react";
+import { ArrowUpIcon, Loader2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,8 +23,8 @@ import { Project } from "@/type/interface/project";
 
 const MODELS = [
   {
-    label: "GPT OSS 20B",
-    value: "openai/gpt-oss-20b",
+    label: "Llama 3.3 70B",
+    value: "llama-3.3-70b-versatile",
     provider: "groq",
   },
 ];
@@ -33,9 +33,15 @@ interface ChatInputProps {
   messages?: Chat[];
   setMessages?: React.Dispatch<React.SetStateAction<Chat[]>>;
   projectId?: string;
+  onToolCall?: (toolCall: any) => void;
 }
 
-export default function ChatInput({ messages, setMessages, projectId }: ChatInputProps) {
+export default function ChatInput({ 
+  messages, 
+  setMessages, 
+  projectId,
+  onToolCall 
+}: ChatInputProps) {
   const [userInput, setUserInput] = useState<string>("");
   const [model, setModel] = useState(MODELS[0]);
   const [loading, setLoading] = useState(false);
@@ -54,6 +60,7 @@ export default function ChatInput({ messages, setMessages, projectId }: ChatInpu
     setLoading(true);
     setError(null);
 
+    // Add user message to UI immediately
     if (setMessages) {
       setMessages((prev) => [...prev, {
         id: crypto.randomUUID(),
@@ -68,6 +75,7 @@ export default function ChatInput({ messages, setMessages, projectId }: ChatInpu
       const formatMessages = (messages || []).map((msg) => ({
         role: msg.role,
         content: msg.content,
+        tool_calls: msg.tool_calls,
       }));
 
       const newMessages = [...formatMessages, {
@@ -82,21 +90,39 @@ export default function ChatInput({ messages, setMessages, projectId }: ChatInpu
         project_id: projectId,
       });
 
+      // Handle new project creation
       if (response.data.project !== null) {
         setProjects([...projects, response.data.project as Project]);
         router.push(`/project/${response.data.project.id}`);
-      } else if (setMessages) {
-        setMessages((prev) => [...prev, {
+      }
+
+      // Add assistant message
+      if (setMessages) {
+        const assistantMessage: Chat = {
           id: crypto.randomUUID(),
           project_id: activeOrg?.id || "",
           role: response.data.output.role,
           content: response.data.output.content,
+          tool_calls: response.data.toolCalls?.map((tc: any) => ({
+            id: crypto.randomUUID(),
+            name: tc.name,
+            arguments: JSON.stringify(tc.data),
+          })),
           created_at: new Date().toISOString(),
-        }]);
+        };
+        
+        setMessages((prev) => [...prev, assistantMessage]);
       }
+
+      // Notify parent of tool call (for refreshing results panel)
+      if (onToolCall && response.data.toolCalls) {
+        onToolCall(response.data.toolCalls);
+      }
+
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
         setError(
+          err.response?.data?.error?.message ||
           err.response?.data?.message ||
           err.message ||
           "Failed to send message",
@@ -112,12 +138,19 @@ export default function ChatInput({ messages, setMessages, projectId }: ChatInpu
 
   return (
     <>
-      <InputGroup className="bg-background max-w-lg">
+      <InputGroup className="bg-background w-full">
         <InputGroupTextarea
           value={userInput}
           onChange={(e) => setUserInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSubmit(e)}
-          placeholder="Type or speak your message..."
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              handleSubmit(e);
+            }
+          }}
+          placeholder="Type your message... (e.g., 'Cari AI engineer di Dubai')"
+          disabled={loading}
+          className="min-h-[60px]"
         />
         <InputGroupAddon align="block-end">
           <DropdownMenu>
@@ -142,11 +175,15 @@ export default function ChatInput({ messages, setMessages, projectId }: ChatInpu
             onClick={handleSubmit}
             disabled={loading || !userInput.trim()}
           >
-            <ArrowUpIcon />
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <ArrowUpIcon />
+            )}
           </InputGroupButton>
         </InputGroupAddon>
       </InputGroup>
-      {error && <p className="text-red-500 text-sm">{error}</p>}
+      {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
     </>
   );
 }

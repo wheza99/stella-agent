@@ -1,17 +1,18 @@
 "use client";
 
 import ChatInput from "./chat-input";
-import { Card, CardContent, CardFooter } from "../../ui/card";
 import ChatBubble from "./chat-bubble";
 import { Chat } from "@/type/interface/chat";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import axios from "axios";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 
 interface ChatSectionProps {
   projectId?: string;
+  onToolCall?: (toolCall: any) => void;
 }
 
-export default function ChatSection({ projectId }: ChatSectionProps) {
+export default function ChatSection({ projectId, onToolCall }: ChatSectionProps) {
   const [messages, setMessages] = useState<Chat[]>([]);
 
   useEffect(() => {
@@ -30,13 +31,24 @@ export default function ChatSection({ projectId }: ChatSectionProps) {
     fetchProjectChats();
   }, [projectId]);
 
+  const handleToolCall = useCallback((toolCall: any) => {
+    if (onToolCall) {
+      onToolCall(toolCall);
+    }
+  }, [onToolCall]);
+
   return (
     <Card className="w-75 shrink-0 h-[calc(100vh-64px)] flex flex-col rounded-none shadow-none gap-2 pt-2">
       <CardContent className="flex-1 overflow-y-auto space-y-4 pt-4">
         <ChatBubble messages={messages} />
       </CardContent>
       <CardFooter>
-        <ChatInput messages={messages} setMessages={setMessages} projectId={projectId} />
+        <ChatInput
+          messages={messages}
+          setMessages={setMessages}
+          projectId={projectId}
+          onToolCall={handleToolCall}
+        />
       </CardFooter>
     </Card>
   );
