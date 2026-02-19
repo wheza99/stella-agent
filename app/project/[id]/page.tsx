@@ -12,17 +12,15 @@ function ProjectDetailPage({ params }: PageProps) {
   const { id } = use(params);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  const handleToolCall = useCallback((toolCall: any) => {
-    if (toolCall?.some?.((tc: any) => 
-      tc.name === "search_linkedin_profiles" && tc.success
-    )) {
+  const handleToolCallComplete = useCallback((toolName: string, success: boolean) => {
+    if (toolName === "search_linkedin_profiles" && success) {
       setRefreshKey(prev => prev + 1);
     }
   }, []);
 
   return (
     <div className="w-full h-full flex flex-row flex-1 overflow-hidden">
-      <ChatSection projectId={id} onToolCall={handleToolCall} />
+      <ChatSection projectId={id} onToolCallComplete={handleToolCallComplete} />
       <LinkedInResultsPanel key={refreshKey} projectId={id} />
     </div>
   )

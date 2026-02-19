@@ -17,6 +17,7 @@ interface UserContextType {
   setIsOrgRequired: (required: boolean) => void;
   loading: boolean;
   refreshUser: () => Promise<void>;
+  updateProjectTitle: (projectId: string, newTitle: string) => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -80,6 +81,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const updateProjectTitle = (projectId: string, newTitle: string) => {
+    setProjects((prev) =>
+      prev.map((p) =>
+        p.id === projectId ? { ...p, title: newTitle } : p
+      )
+    );
+  };
+
   useEffect(() => {
     fetchUser();
   }, []);
@@ -101,6 +110,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         setIsOrgRequired,
         loading,
         refreshUser: fetchUser,
+        updateProjectTitle,
       }}
     >
       {children}

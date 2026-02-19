@@ -2,9 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { Groq } from "groq-sdk";
 import { availableTools } from "@/lib/groq/tools/linkedin-search";
-import { toolExecutors } from "@/lib/groq/executors/linkedin-search";
 import { CHAT_SYSTEM_PROMPT } from "@/lib/groq/prompts/system";
-import { ExecutionContext, ToolCallResult } from "@/lib/groq/executors/types";
 
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY!,
@@ -55,21 +53,28 @@ export async function POST(request: Request) {
   const effectiveProjectId = project?.id || project_id;
 
   // 3. Build messages with system prompt
+  // Sanitize message object to remove null fields that API might reject
   const messagesWithSystem = [
     { role: "system", content: CHAT_SYSTEM_PROMPT },
-    ...messages.map((msg: any) => ({
-      role: msg.role,
-      content: msg.content,
-      // Include tool_calls if present (for conversation history)
-      ...(msg.tool_calls && { tool_calls: msg.tool_calls }),
-      ...(msg.tool_call_id && { tool_call_id: msg.tool_call_id }),
-    })),
+    ...messages.map((msg: any) => {
+      const cleanMsg: any = {
+        role: msg.role,
+        content: msg.content,
+      };
+      if (msg.tool_calls && msg.tool_calls.length > 0) {
+        cleanMsg.tool_calls = msg.tool_calls;
+      }
+      if (msg.tool_call_id) {
+        cleanMsg.tool_call_id = msg.tool_call_id;
+      }
+      return cleanMsg;
+    }),
   ];
 
   try {
-    // 4. First call to Groq (may return tool calls)
+    // 4. Call Groq API
     console.log("[ChatAPI] Calling Groq with tools...");
-    const firstResponse = await groq.chat.completions.create({
+    const chatCompletion = await groq.chat.completions.create({
       messages: messagesWithSystem,
       model: model || DEFAULT_MODEL,
       tools: availableTools,
@@ -79,144 +84,63 @@ export async function POST(request: Request) {
       top_p: 0.95,
     });
 
-    const firstMessage = firstResponse.choices[0].message;
-    console.log("[ChatAPI] First response received");
+    const responseMessage = chatCompletion.choices[0].message;
+    console.log("[ChatAPI] Response received");
 
-    // 5. Check if tool calls are needed
-    if (firstMessage.tool_calls && firstMessage.tool_calls.length > 0) {
-      console.log("[ChatAPI] Tool calls detected:", firstMessage.tool_calls.length);
-      
-      const executionContext: ExecutionContext = {
-        userId: user.id,
-        projectId: effectiveProjectId,
-        orgId: org_id,
-      };
-
-      // Execute all tool calls
-      const toolResults: ToolCallResult[] = [];
-      
-      for (const toolCall of firstMessage.tool_calls) {
-        console.log("[ChatAPI] Executing tool:", toolCall.function.name);
-        
-        const executor = toolExecutors[toolCall.function.name];
-        
-        if (executor) {
-          const args = JSON.parse(toolCall.function.arguments);
-          const result = await executor.execute(args, executionContext);
-          
-          toolResults.push({
-            toolCallId: toolCall.id,
-            name: toolCall.function.name,
-            result,
-          });
-          
-          console.log("[ChatAPI] Tool result:", result.success ? "success" : "failed");
-        } else {
-          console.log("[ChatAPI] No executor found for:", toolCall.function.name);
-          toolResults.push({
-            toolCallId: toolCall.id,
-            name: toolCall.function.name,
-            result: {
-              success: false,
-              error: `Unknown tool: ${toolCall.function.name}`,
-            },
-          });
-        }
+    // 5. Identify new messages to insert
+    // Strategy: Find the last message from 'assistant' in the input array.
+    // Everything after that is considered a new message from the client side (user or tool).
+    let newMessages = [];
+    let lastAssistantIndex = -1;
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === 'assistant') {
+        lastAssistantIndex = i;
+        break;
       }
-
-      // 6. Second call to Groq with tool results
-      console.log("[ChatAPI] Calling Groq with tool results...");
-      
-      const secondMessages = [
-        ...messagesWithSystem,
-        firstMessage,
-        ...toolResults.map((tr) => ({
-          role: "tool" as const,
-          tool_call_id: tr.toolCallId,
-          content: JSON.stringify(tr.result),
-        })),
-      ];
-
-      const secondResponse = await groq.chat.completions.create({
-        messages: secondMessages,
-        model: model || DEFAULT_MODEL,
-        temperature: 0.6,
-        max_completion_tokens: 4096,
-        top_p: 0.95,
-      });
-
-      const finalMessage = secondResponse.choices[0].message;
-      console.log("[ChatAPI] Final response received");
-
-      // 7. Store messages in database
-      const { error: insertError } = await supabase.from("chats").insert([
-        {
-          role: "user",
-          content: messages[messages.length - 1].content,
-          project_id: effectiveProjectId,
-          created_at: new Date().toISOString(),
-        },
-        {
-          role: "assistant",
-          content: finalMessage.content,
-          project_id: effectiveProjectId,
-          tool_calls: firstMessage.tool_calls?.map((tc) => ({
-            id: tc.id,
-            name: tc.function.name,
-            arguments: tc.function.arguments,
-          })),
-          created_at: new Date(Date.now() + 1000).toISOString(),
-        },
-      ]);
-
-      if (insertError) {
-        console.error("[ChatAPI] Failed to insert messages:", insertError);
-      }
-
-      // 8. Return response with tool info
-      return NextResponse.json({
-        status: "success",
-        output: {
-          role: finalMessage.role,
-          content: finalMessage.content,
-        },
-        toolCalls: toolResults.map((tr) => ({
-          name: tr.name,
-          success: tr.result.success,
-          data: tr.result.data,
-          error: tr.result.error,
-        })),
-        project,
-      });
     }
 
-    // 9. No tool calls - regular response
-    console.log("[ChatAPI] No tool calls, returning regular response");
-    
-    const { error: insertError } = await supabase.from("chats").insert([
-      {
-        role: "user",
-        content: messages[messages.length - 1].content,
+    if (lastAssistantIndex === -1) {
+      // First turn or no assistant history, assume all messages are new
+      newMessages = messages;
+    } else {
+      // Get all messages after the last assistant message
+      newMessages = messages.slice(lastAssistantIndex + 1);
+    }
+
+    // 6. Prepare batch insert
+    const messagesToInsert = [
+      ...newMessages.map((msg: any) => ({
+        role: msg.role,
+        content: msg.content,
+        tool_calls: msg.tool_calls,
+        tool_call_id: msg.tool_call_id,
         project_id: effectiveProjectId,
         created_at: new Date().toISOString(),
-      },
+      })),
       {
-        role: firstMessage.role,
-        content: firstMessage.content,
+        role: responseMessage.role,
+        content: responseMessage.content,
+        tool_calls: responseMessage.tool_calls,
         project_id: effectiveProjectId,
         created_at: new Date(Date.now() + 1000).toISOString(),
       },
-    ]);
+    ];
+
+    const { error: insertError } = await supabase
+      .from("chats")
+      .insert(messagesToInsert);
 
     if (insertError) {
       console.error("[ChatAPI] Failed to insert messages:", insertError);
     }
 
+    // 7. Return response with tool_calls (if any) for frontend to execute
     return NextResponse.json({
       status: "success",
       output: {
-        role: firstMessage.role,
-        content: firstMessage.content,
+        role: responseMessage.role,
+        content: responseMessage.content,
+        tool_calls: responseMessage.tool_calls,
       },
       project,
     });
