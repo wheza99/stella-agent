@@ -42,7 +42,7 @@ Examples: ["Dubai"], ["Singapore"], ["Indonesia"], ["New York", "San Francisco"]
         maxItems: {
           type: "integer",
           description: "Maximum number of profiles to return. Default is 25. Maximum is 100.",
-          default: 25,
+          default: 10,
         },
       },
       required: ["searchQuery"],

@@ -3,7 +3,7 @@
 import ChatInput from "./chat-input";
 import ChatBubble from "./chat-bubble";
 import { Chat } from "@/type/interface/chat";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import axios from "axios";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 
@@ -20,6 +20,15 @@ export default function ChatSection({
 }: ChatSectionProps) {
   const [messages, setMessages] = useState<Chat[]>(initialChats);
   const [isProcessingTools, setIsProcessingTools] = useState(false);
+  
+  // Track executed tool call IDs to prevent duplicate executions
+  const executedToolCallIds = useRef<Set<string>>(new Set());
+  
+  // Track the last user message count to detect new user input
+  const lastUserMessageCount = useRef<number>(0);
+  
+  // Track if tool calling has been completed for this turn
+  const toolCallingCompleted = useRef<boolean>(false);
 
   // Fetch chats only if no initial chats provided
   useEffect(() => {
@@ -114,6 +123,17 @@ export default function ChatSection({
 
       const lastMessage = messages[messages.length - 1];
       
+      // Count user messages to detect new user input
+      const currentUserMessageCount = messages.filter(m => m.role === "user").length;
+      
+      // If user sent a new message, reset the tool calling state
+      if (currentUserMessageCount > lastUserMessageCount.current) {
+        console.log("[ChatSection] New user message detected, resetting tool calling state");
+        lastUserMessageCount.current = currentUserMessageCount;
+        toolCallingCompleted.current = false;
+        executedToolCallIds.current.clear();
+      }
+      
       // Check if last message is from assistant and has tool calls
       if (
         lastMessage?.role === "assistant" &&
@@ -127,12 +147,33 @@ export default function ChatSection({
         
         if (!hasFunctionCalls) return; // Already processed or different format
 
-        console.log("[ChatSection] Tool calls detected:", lastMessage.tool_calls.length);
+        // CRITICAL: Stop if we've already completed tool calling for this turn
+        // This prevents infinite loops where LLM keeps calling tools
+        if (toolCallingCompleted.current) {
+          console.log("[ChatSection] Tool calling already completed for this turn, ignoring additional tool calls");
+          return;
+        }
+
+        // Filter out already executed tool calls to prevent duplicates
+        const newToolCalls = lastMessage.tool_calls.filter(
+          (tc: any) => !executedToolCallIds.current.has(tc.id)
+        );
+
+        if (newToolCalls.length === 0) {
+          console.log("[ChatSection] All tool calls already executed, skipping");
+          return;
+        }
+
+        console.log("[ChatSection] Tool calls detected:", newToolCalls.length);
+        
+        // Mark tool calls as executed immediately
+        newToolCalls.forEach((tc: any) => executedToolCallIds.current.add(tc.id));
+        
         setIsProcessingTools(true);
 
         try {
-          // Execute all tool calls in parallel
-          const toolPromises = lastMessage.tool_calls.map((toolCall: any) =>
+          // Execute only new tool calls in parallel
+          const toolPromises = newToolCalls.map((toolCall: any) =>
             executeTool(toolCall, projectId || "")
           );
 
@@ -160,34 +201,55 @@ export default function ChatSection({
             }
           });
 
-          // Send back to LLM to get final response
-          const response = await axios.post("/api/chat/groq", {
-            messages: messagesWithToolResults.map((msg) => ({
-              role: msg.role,
-              content: msg.content,
-              tool_calls: msg.tool_calls,
-              tool_call_id: msg.tool_call_id,
-            })),
-            model: "llama-3.3-70b-versatile",
-            project_id: projectId,
-          });
-
-          if (response.data.output) {
-            const assistantMessage: Chat = {
+          // Check if ALL tool calls failed - if so, show error directly without calling LLM
+          const allFailed = toolResults.every((result) => !result.success);
+          
+          // MARK TOOL CALLING AS COMPLETED - prevents further tool calls this turn
+          toolCallingCompleted.current = true;
+          
+          if (allFailed) {
+            console.log("[ChatSection] All tool calls failed, showing error directly without LLM call");
+            // Add a simple error message from assistant
+            const errorMessage: Chat = {
               id: crypto.randomUUID(),
               project_id: projectId || "",
-              role: response.data.output.role,
-              content: response.data.output.content,
-              tool_calls: response.data.output.tool_calls,
+              role: "assistant",
+              content: "Maaf, terjadi kesalahan saat mencari profil LinkedIn. Silakan coba beberapa saat lagi atau perbaiki kriteria pencarian Anda.",
               created_at: new Date().toISOString(),
             };
+            setMessages((prev) => [...prev, errorMessage]);
+          } else {
+            // Send back to LLM to get final response
+            // Note: Even if LLM returns more tool calls, they will be ignored
+            // because toolCallingCompleted.current is now true
+            const response = await axios.post("/api/chat/groq", {
+              messages: messagesWithToolResults.map((msg) => ({
+                role: msg.role,
+                content: msg.content,
+                tool_calls: msg.tool_calls,
+                tool_call_id: msg.tool_call_id,
+              })),
+              model: "llama-3.3-70b-versatile",
+              project_id: projectId,
+            });
 
-            setMessages((prev) => [...prev, assistantMessage]);
+            if (response.data.output) {
+              const assistantMessage: Chat = {
+                id: crypto.randomUUID(),
+                project_id: projectId || "",
+                role: response.data.output.role,
+                content: response.data.output.content,
+                tool_calls: response.data.output.tool_calls,
+                created_at: new Date().toISOString(),
+              };
 
-            // If there are more tool calls, they will be handled by the next effect cycle
+              setMessages((prev) => [...prev, assistantMessage]);
+            }
           }
         } catch (error) {
           console.error("[ChatSection] Tool execution failed:", error);
+          // Mark as completed even on error to prevent retry loops
+          toolCallingCompleted.current = true;
         } finally {
           setIsProcessingTools(false);
         }

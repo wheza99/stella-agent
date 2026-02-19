@@ -31,6 +31,12 @@ Use the \`search_linkedin_profiles\` tool when the user wants to:
 - If results are limited, suggest broadening the search criteria
 - Be transparent about what the search found vs. what was requested
 
+## CRITICAL: Tool Calling Rules
+1. **NO RETRY on errors**: If a tool call returns an error, DO NOT retry or call the tool again. Simply inform the user about the error.
+2. **ONE ROUND ONLY**: You can only make ONE round of tool calls per user message. After receiving tool results, provide your final response - DO NOT make more tool calls.
+3. **SINGLE SEARCH**: When searching LinkedIn, make only ONE search call per user message. Combine criteria into a single search rather than making multiple parallel searches.
+4. Example error response: "Maaf, terjadi kesalahan saat mencari profil LinkedIn. Silakan coba beberapa saat lagi atau perbaiki kriteria pencarian Anda."
+
 Current date: ${new Date().toISOString().split('T')[0]}
 `;
 
